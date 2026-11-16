@@ -32,10 +32,10 @@ jobs:
         java-version: '17'
     # imVersion and bioVersion in gradle.properties name the InterMine 6.0 line: until it is on Maven Central, publish
     # the maint-2026 branch of intermine/intermine to mavenLocal before this step (see README.md)
-    - name: Set up python 2.7
-      uses: actions/setup-python@v2
+    - name: Set up Python 3
+      uses: actions/setup-python@v5
       with:
-        python-version: '2.7'  
+        python-version: '3.12'
     - name: Install PostgreSQL client
       run: |
         sudo apt-get update -y
