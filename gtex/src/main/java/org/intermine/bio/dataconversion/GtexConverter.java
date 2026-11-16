@@ -12,6 +12,7 @@ package org.intermine.bio.dataconversion;
 
 import java.io.Reader;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -122,6 +123,8 @@ public class GtexConverter extends BioDirectoryConverter
         for (File file : dir.listFiles()) {
             files.add(file);
         }
+        // listFiles() has no defined order, and item identifiers depend on it
+        Collections.sort(files);
         return files;
     }
 
