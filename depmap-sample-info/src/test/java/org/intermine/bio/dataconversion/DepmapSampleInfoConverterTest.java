@@ -17,6 +17,7 @@ import org.intermine.metadata.Model;
 
 import java.io.File;
 import java.util.HashMap;
+import java.util.Set;
 
 public class DepmapSampleInfoConverterTest extends ItemsTestCase
 {
@@ -38,11 +39,15 @@ public class DepmapSampleInfoConverterTest extends ItemsTestCase
         File tmp = new File(getClass().getClassLoader().getResource("sample_info.csv").toURI());
         File dataDirectory = tmp.getParentFile();
 
-        System.out.println(dataDirectory.getAbsolutePath());
-
         converter.process(dataDirectory);
         converter.close();
 
-        writeItemsFile(itemWriter.getItems(), "depmap-sample-info-items.xml");
+        // uncomment to write out a new target items file: it goes to the build directory, not into
+        // the source tree (copy it to src/test/resources/DepmapSampleInfoConverterTest-tgt.xml once
+        // the items have been read by eye)
+        //writeItemsFile(itemWriter.getItems(), "build/depmap-sample-info-items.xml");
+
+        Set<org.intermine.xml.full.Item> expected = readItemSet("DepmapSampleInfoConverterTest-tgt.xml");
+        assertEquals(expected, itemWriter.getItems());
     }
 }
