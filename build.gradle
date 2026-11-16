@@ -1,8 +1,14 @@
+// HumanMine bio sources, on the InterMine 6.0 line: Gradle 8.14, JDK 17 (JDK 8 also works), maven-publish.
+// See README.md for how to build against a local InterMine build.
+
 buildscript {
     repositories {
+        // the InterMine plugin: a local build (publishToMavenLocal in InterMine's plugin/, or -Dmaven.repo.local=<dir>) or Maven Central
         mavenLocal()
         mavenCentral()
     }
+    // the version catalog (libs) is not available in buildscript {}: the plugin version comes from the imVersion system
+    // property (gradle.properties), as in the InterMine builds
     dependencies {
         classpath group: 'org.intermine', name: 'plugin', version: System.getProperty("imVersion")
     }
@@ -18,16 +24,16 @@ subprojects {
     group = 'org.intermine'
     version = '4.3.0'
 
-    apply plugin: 'java'
-    apply plugin: 'maven'
+    apply plugin: 'java-library'
     apply plugin: 'dbmodel'
     apply plugin: 'biosource-dbmodel'
-    apply plugin: "checkstyle"
+    apply plugin: 'checkstyle'
 
-    sourceCompatibility = 1.8
-    targetCompatibility = 1.8
+    // Java 8 bytecode whatever the build JDK; --release 8 and the test JVM options on JDK 9+
+    apply from: "${rootDir}/config/gradle/java-target.gradle"
 
     repositories {
+        // InterMine artifacts built locally (honours -Dmaven.repo.local), then Maven Central
         mavenLocal()
         mavenCentral()
     }
@@ -35,18 +41,48 @@ subprojects {
     configurations {
         bioModel
         mergeModel
+
+        all {
+            // InterMine 6.0 logs through reload4j (org.apache.log4j.Logger); the old build also put log4j 2.17.1 on the classpath
+            exclude group: 'org.apache.logging.log4j'
+        }
     }
 
     dependencies {
-        compile group: 'org.apache.logging.log4j', name: 'log4j-api', version: '2.17.1'
-        compile group: 'org.apache.logging.log4j', name: 'log4j-core', version: '2.17.1'
-        compile group: 'org.intermine', name: 'bio-core', version: bioVersion
-        compile group : "org.intermine", name: "intermine-resources", version: imVersion // log4j
-        compile group: 'commons-collections', name: 'commons-collections', version: '3.2'
-        testCompile group: 'junit', name: 'junit', version: '4.8.2'
-        testCompile group: "org.intermine", name: "intermine-integrate", version: imVersion, classifier: "testClasses"
-        testCompile group: 'xmlunit', name: 'xmlunit', version: '1.0'
-        mergeModel group : "org.intermine", name: "intermine-objectstore", version: imVersion
+        // The types in the converters' constructors and protected methods (ItemWriter, Model, ObjectStore, BioFileConverter) are
+        // api, so that a project that extends a converter compiles. A bio source is not a library for compile-time use, though:
+        // a mine's webapp compiles against the generated model, not against these jars, and the plugin only puts them on a
+        // runtime classpath. Libraries used only inside method bodies are implementation (POM scope runtime), as in
+        // InterMine's bio/sources/build.gradle.
+        api group: 'org.intermine', name: 'bio-core', version: bioVersion, transitive: false
+        api group: 'org.intermine', name: 'intermine-integrate', version: imVersion, transitive: false
+        api group: 'org.intermine', name: 'intermine-objectstore', version: imVersion, transitive: false
+        api group: 'org.intermine', name: 'intermine-model', version: imVersion, transitive: false
+        api libs.reload4j
+        // org.apache.commons.lang.StringUtils (15 converters). InterMine itself moved to commons-lang3; moving these
+        // converters is a separate change (see README.md)
+        implementation libs.commons.lang
+
+        // Needed at run time by the plugin's Ant tasks (generateModel, buildUnitTestDB: they run on the project's runtime
+        // classpath) and by the unit tests, not to compile: runtimeOnly, so POM scope runtime, as in InterMine's POMs
+        runtimeOnly group: 'org.intermine', name: 'intermine-resources', version: imVersion, transitive: false // property files only
+        runtimeOnly(libs.hikaricp) { transitive = false }
+        runtimeOnly libs.commons.collections // torque
+        runtimeOnly libs.commons.io
+        runtimeOnly libs.commons.lang3
+        runtimeOnly libs.commons.logging
+        runtimeOnly libs.postgresql
+        runtimeOnly libs.slf4j.reload4j
+
+        testImplementation libs.junit
+        testImplementation group: 'org.intermine', name: 'intermine-integrate', version: imVersion, classifier: 'testClasses'
+        testImplementation libs.xmlunit
+
+        mergeModel libs.reload4j
+        mergeModel libs.slf4j.reload4j
+        mergeModel group: 'org.intermine', name: 'intermine-objectstore', version: imVersion
+        mergeModel group: 'org.intermine', name: 'intermine-model', version: imVersion
+        mergeModel libs.commons.lang3
         bioModel group: 'org.intermine', name: 'bio-model', version: bioVersion, transitive: false
     }
 
@@ -56,15 +92,17 @@ subprojects {
         defaultInterminePropertiesFile = "default.intermine.bio-test.properties"
     }
 
-    task copyMineProperties() {
-        dependsOn 'processResources'
-        doLast {
-            copy {
-                from "${System.env.HOME}/.intermine/intermine-bio-test.properties"
-                into sourceSets.main.output.resourcesDir
-                rename { fileName -> fileName.replace('intermine-bio-test.properties', 'intermine.properties') }
-            }
-        }
+    // The test mine's intermine.properties reaches the resources output through processResources, so every reader of that
+    // directory (the tests, the plugin's tasks, which name copyMineProperties as the producer) sees who wrote it.
+    // The jar does not carry it.
+    task copyMineProperties(type: Copy) {
+        from "${System.env.HOME}/.intermine/intermine-bio-test.properties"
+        into layout.buildDirectory.dir('im/mine-properties')
+        rename { fileName -> fileName.replace('intermine-bio-test.properties', 'intermine.properties') }
+    }
+
+    processResources {
+        from copyMineProperties
     }
 
     jar {
@@ -72,13 +110,12 @@ subprojects {
     }
 
     checkstyle {
-        toolVersion '7.8.1'
-        configFile file("${rootDir}/config/checkstyle/checkstyle.xml")
+        toolVersion = libs.versions.checkstyle.get()
+        configFile = file("${rootDir}/config/checkstyle/checkstyle.xml")
         sourceSets = [sourceSets.main]
         showViolations = true
         ignoreFailures = false
         maxWarnings = 0
-        //reportsDir = file("$project.rootDir/reports/checkstyle/$project.name")
         configProperties = [
                 'checkstyle.header.file': "${rootDir}/config/checkstyle/copyright_header.txt",
                 'suppressionFile': "${rootDir}/config/checkstyle/suppressions.xml"
@@ -106,26 +143,17 @@ subprojects {
         forkEvery = 1
     }
 
-    task sourcesJar(type: Jar, dependsOn: classes) {
-        classifier = 'sources'
-        from sourceSets.main.allSource
-    }
-
-    task javadocJar(type: Jar, dependsOn: javadoc) {
-        classifier = 'javadoc'
-        from javadoc.destinationDir
-    }
-
-
-    artifacts {
-        archives sourcesJar
-        archives javadocJar
-    }
+    // Publishing (maven-publish, signing, sources and javadoc jars, `install` alias, Central bundle): see README.md
+    ext.imPublicationDescription = 'InterMine HumanMine bio sources'
+    ext.imPublicationRepo = 'humanmine-bio-sources'
+    apply from: "${rootDir}/config/gradle/publishing.gradle"
 }
+
+// `centralBundle`: zip of all signed publications for the Maven Central Portal (README.md)
+apply from: "${rootDir}/config/gradle/central-bundle.gradle"
 
 task testReport(type: TestReport) {
-    destinationDir = file("$buildDir/reports/allTests")
-    // Include the results from the `test` task in all subprojects
-    reportOn subprojects*.test
+    destinationDirectory = layout.buildDirectory.dir('reports/allTests')
+    // Include the results from the `test` task in all subprojects (flatMap keeps the task dependency)
+    testResults.from(subprojects.collect { sub -> sub.tasks.named('test', Test).flatMap { it.binaryResultsDirectory } })
 }
-

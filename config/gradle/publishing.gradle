@@ -1,0 +1,130 @@
+/*
+ * Maven publishing for the bio-source modules of this repository (im-ee7.49). Adapted from config/gradle/publishing.gradle of
+ * the InterMine repository (https://github.com/intermine/intermine); it replaces the old `maven` plugin, `uploadArchives {
+ * mavenDeployer }`, the OSSRH (s01.oss.sonatype.org) settings and the bintray/artifactory plugins of the *-static modules.
+ *
+ * Applied from the `subprojects { }` block of the root build.gradle, after the `java-library` plugin, with
+ *
+ *     ext.imPublicationDescription = '...'   // POM description
+ *     ext.imPublicationRepo = '...'          // GitHub repository name, for the POM url and scm
+ *
+ * Provides, per module:
+ *   - a MavenPublication `mavenJava`: components.java (jar, with the sources and javadoc jars) and the POM metadata the old
+ *     uploadArchives block set. The dependencies come out with the scopes of the old maven plugin: api -> compile,
+ *     implementation and runtimeOnly -> runtime;
+ *   - `publishToMavenLocal` (honours -Dmaven.repo.local) and an `install` alias for it, so `./gradlew install` still works;
+ *   - a file repository `centralBundle` under <root>/build/central-bundle/m2 for config/gradle/central-bundle.gradle;
+ *   - PGP signing, required only when the root `centralBundle` task is in the task graph, never for local installs. The key
+ *     comes from the environment (SIGNING_KEY, SIGNING_PASSWORD, optionally SIGNING_KEY_ID), as in InterMine. Uploading the
+ *     bundle to the Maven Central Portal is a manual step; see README.md.
+ */
+apply plugin: 'maven-publish'
+apply plugin: 'signing'
+
+java {
+    withSourcesJar()
+    withJavadocJar()
+}
+
+// Publish the POM only, as InterMine does: Gradle 6+ would otherwise add a .module file that consumers prefer over the POM,
+// and the mines resolve these jars through the POM scopes.
+tasks.withType(GenerateModuleMetadata).configureEach {
+    enabled = false
+}
+
+// see http://blog.joda.org/2014/02/turning-off-doclint-in-jdk-8-javadoc.html
+tasks.withType(Javadoc).configureEach {
+    options.addStringOption('Xdoclint:none', '-quiet')
+}
+
+// created once the module's own build file has run
+afterEvaluate {
+    publishing {
+        publications {
+            create('mavenJava', MavenPublication) {
+                from components.java
+
+                pom {
+                    // Dependencies without coordinates are not valid in a POM
+                    withXml {
+                        asNode().dependencies.dependency.findAll { it.groupId.text().isEmpty() || it.version.text().isEmpty() }.each {
+                            it.parent().remove(it)
+                        }
+                    }
+
+                    name = project.name
+                    description = project.ext.imPublicationDescription
+                    url = "https://github.com/intermine/${project.ext.imPublicationRepo}"
+
+                    scm {
+                        connection = "scm:git:git://github.com/intermine/${project.ext.imPublicationRepo}.git"
+                        developerConnection = "scm:git:ssh://github.com:intermine/${project.ext.imPublicationRepo}.git"
+                        url = "https://github.com/intermine/${project.ext.imPublicationRepo}"
+                    }
+
+                    licenses {
+                        license {
+                            name = 'LGPL-2.1'
+                            url = 'https://www.gnu.org/licenses/old-licenses/lgpl-2.1.txt'
+                        }
+                    }
+
+                    developers {
+                        developer {
+                            name = 'InterMine core team and contributors'
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+publishing {
+    repositories {
+        // Staging area for the Central Portal bundle (config/gradle/central-bundle.gradle).
+        maven {
+            name = 'centralBundle'
+            url = rootProject.layout.buildDirectory.dir('central-bundle/m2')
+        }
+    }
+}
+
+// `install` used to come from the old maven plugin. It is an alias now; use publishToMavenLocal.
+tasks.register('install') {
+    group = 'publishing'
+    description = 'Deprecated alias of publishToMavenLocal.'
+    dependsOn tasks.named('publishToMavenLocal')
+}
+
+// ---- signing: only for a Central bundle, with the key taken from the environment ----
+
+// The root build declares the bundle task (central-bundle.gradle); look it up lazily, it may not exist yet.
+def bundleInGraph = {
+    def bundle = rootProject.tasks.findByName('centralBundle')
+    bundle != null && gradle.taskGraph.hasTask(bundle)
+}
+
+signing {
+    required = bundleInGraph
+}
+// lazy: each publication is signed when it is realised, after the module build file has added its artifacts
+publishing.publications.configureEach { publication ->
+    signing.sign publication
+}
+
+gradle.taskGraph.whenReady {
+    if (bundleInGraph()) {
+        def key = System.getenv('SIGNING_KEY')
+        if (!key) {
+            throw new GradleException('centralBundle needs the armoured PGP private key in the SIGNING_KEY environment variable ' +
+                    '(and SIGNING_PASSWORD, optionally SIGNING_KEY_ID); see README.md')
+        }
+        def keyId = System.getenv('SIGNING_KEY_ID')
+        if (keyId) {
+            signing.useInMemoryPgpKeys(keyId, key, System.getenv('SIGNING_PASSWORD'))
+        } else {
+            signing.useInMemoryPgpKeys(key, System.getenv('SIGNING_PASSWORD'))
+        }
+    }
+}
