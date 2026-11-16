@@ -17,6 +17,7 @@ include ':bio-source-arrayexpress-atlas',
 ':bio-source-ncbi-summaries',
 ':bio-source-orphanet',
 ':bio-source-protein-atlas',
+':bio-source-signor',
 ':bio-source-humanmine-static',
 ':bio-source-protein-atlas-rna'
 
@@ -37,6 +38,7 @@ project(':bio-source-mgi-alleles').projectDir = new File(settingsDir, './mgi-all
 project(':bio-source-ncbi-summaries').projectDir = new File(settingsDir, './ncbi-summaries')
 project(':bio-source-orphanet').projectDir = new File(settingsDir, './orphanet')
 project(':bio-source-protein-atlas').projectDir = new File(settingsDir, './protein-atlas')
+project(':bio-source-signor').projectDir = new File(settingsDir, './signor')
 project(':bio-source-humanmine-static').projectDir = new File(settingsDir, './humanmine-static')
 project(':bio-source-protein-atlas-rna').projectDir = new File(settingsDir, './protein-atlas-rna')
 
