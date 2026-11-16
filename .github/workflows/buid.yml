@@ -4,10 +4,23 @@ on:
   push:
   pull_request:
 
+# Until InterMine 6.0.0 is on Maven Central, the job builds the maint-2026 branch of
+# gmicklem/intermine itself (the "InterMine" steps below) and the build here resolves
+# org.intermine:*:6.0.+ from the runner's ~/.m2 (mavenLocal()).
+# After the 6.0.0 release delete this env, the "Check out InterMine", cache and "Install
+# InterMine" steps and the Python step: the build then resolves 6.0.+ from Maven Central.
+env:
+  INTERMINE_REF: maint-2026
+
+permissions:
+  contents: read
+
 jobs:
   unit-tests:
     runs-on: ubuntu-latest
-    
+    # cold: InterMine install ~15-25 min + this build; warm (cache hit): a few minutes
+    timeout-minutes: 60
+
     services:
       # Label used to access the service container
       postgres:
@@ -24,18 +37,63 @@ jobs:
         ports:
           - 5432/tcp
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
     - name: Set up JDK 17
       uses: actions/setup-java@v4
       with:
         distribution: temurin
         java-version: '17'
-    # imVersion and bioVersion in gradle.properties name the InterMine 6.0 line: until it is on Maven Central, publish
-    # the maint-2026 branch of intermine/intermine to mavenLocal before this step (see README.md)
+    # Python 3.10+ is for InterMine's config/lib/install_intermine.py (dataclasses, glob(root_dir=)) only:
+    # config/init.sh and config/run.sh of this repository do not use Python
     - name: Set up Python 3
       uses: actions/setup-python@v5
       with:
         python-version: '3.12'
+    # Build InterMine: check out the pinned branch into ./intermine (inside the workspace: checkout cannot go above it)
+    - name: Check out InterMine ${{ env.INTERMINE_REF }}
+      uses: actions/checkout@v4
+      with:
+        repository: gmicklem/intermine
+        ref: ${{ env.INTERMINE_REF }}
+        path: intermine
+    - name: Resolve the InterMine commit
+      id: im
+      run: echo "sha=$(git -C intermine rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+    # The key has the ref and the exact commit, so a moved branch rebuilds; restore-keys start from the last build of the
+    # ref (the install republishes 6.0.0 over it, and the Gradle caches are reused)
+    - name: Restore the InterMine build cache
+      id: im-cache
+      uses: actions/cache/restore@v4
+      with:
+        path: |
+          ~/.m2/repository/org/intermine
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: intermine-${{ runner.os }}-jdk17-${{ env.INTERMINE_REF }}-${{ steps.im.outputs.sha }}
+        restore-keys: |
+          intermine-${{ runner.os }}-jdk17-${{ env.INTERMINE_REF }}-
+    # install_intermine.py writes the gradle.properties and gradle-wrapper.properties of the InterMine builds and runs
+    # `./gradlew publishToMavenLocal` in plugin, intermine, bio, bio/sources and bio/postprocess, in that order. It needs no
+    # database: that task builds and publishes jars without running the tests. The PSQL_* variables are only substituted
+    # into the ~/.intermine/*.properties files the script copies (config/init.sh writes this repository's own afterwards).
+    - name: Install InterMine ${{ env.INTERMINE_REF }} into ~/.m2
+      if: steps.im-cache.outputs.cache-hit != 'true'
+      working-directory: intermine
+      env:
+        PSQL_HOST: localhost
+        PSQL_USER: test
+        PSQL_PWD: test
+      run: python3 -I config/lib/install_intermine.py
+    # Saved here, not at the end of the job, so that a failing test run of this repository keeps the InterMine build
+    - name: Save the InterMine build cache
+      if: steps.im-cache.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: |
+          ~/.m2/repository/org/intermine
+          ~/.gradle/caches
+          ~/.gradle/wrapper
+        key: intermine-${{ runner.os }}-jdk17-${{ env.INTERMINE_REF }}-${{ steps.im.outputs.sha }}
     - name: Install PostgreSQL client
       run: |
         sudo apt-get update -y

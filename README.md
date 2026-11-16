@@ -50,29 +50,13 @@ These data sources are built with Gradle 8.14 (the wrapper downloads it) against
   SIGNING_PASSWORD=... ./gradlew centralBundle` signs the publications and writes `build/central-bundle/bio-sources-human-bundle.zip`, which is uploaded
   to the Central Portal as described in InterMine's `docs/RELEASING.md`. Signing is only done for `centralBundle`, never for local builds.
 
-What a CI run needs until InterMine 6.0.0 is published
+Continuous integration
 ------------------------
 
-The workflow in `.github/workflows` runs `./config/init.sh && ./config/run.sh` on a plain `ubuntu-latest` runner with PostgreSQL. `gradle.properties`
-asks for InterMine `6.0.+` (`imVersion`, `bioVersion`), which the `maint-2026` branch of
-[intermine/intermine](https://github.com/intermine/intermine) publishes as `6.0.0`. Maven Central has no 6.x yet (its newest `org.intermine:plugin`
-is 5.1.0, which is another build), so a CI run resolves `org.intermine:plugin:6.0.+` and the `bio-core`, `intermine-*` artefacts only if they were put in
-the runner's local Maven repository first. Until 6.0.0 is on Central, a run needs these steps before `./config/init.sh`:
-
-1. JDK 17 (the workflow has it) and Python 3.10 or later: InterMine's `config/lib/install_intermine.py` uses `dataclasses` and `glob(root_dir=...)`.
-   The workflow's "Set up python 2.7" step does not provide that; add a `actions/setup-python` step for Python 3.10+ (or run the script with an
-   installed `python3` of that version).
-2. A checkout of `maint-2026` of `intermine/intermine` (for example `actions/checkout` with `repository: intermine/intermine`, `ref: maint-2026`,
-   `path: intermine`).
-3. Publish its artefacts into the runner's `~/.m2` (the default `mavenLocal()` of this build reads), as in "InterMine artefacts" above:
-   `PSQL_HOST=localhost PSQL_USER=test PSQL_PWD=test python3 -I config/lib/install_intermine.py` in that checkout (a few minutes; it also writes
-   `~/.intermine/*.properties` unless they exist).
-4. PostgreSQL with the `bio-test` database and the `test` user: `./config/init.sh` creates them on the runner (`sudo -u postgres createuser test`, ...),
-   as before.
-
-The tests and `checkstyleMain` then run against those artefacts. When 6.0.0 is on Central, steps 1 to 3 go away (`gradle.properties` already
-asks for `6.0.+`). The workflow files do not depend on the InterMine checkout; they are unchanged, so a run without these
-steps fails at the first resolution of `org.intermine:plugin:6.0.+` (that is the expected failure until then).
+The workflow in `.github/workflows` runs `./config/init.sh && ./config/run.sh` on an `ubuntu-latest` runner with PostgreSQL. Until
+InterMine 6.0.0 is on Maven Central, CI builds InterMine `maint-2026` itself (it checks out `gmicklem/intermine` at the ref set in the
+workflow's `INTERMINE_REF`, runs `config/lib/install_intermine.py` and caches the result); once 6.0.0 is released that step is removed and
+`6.0.+` resolves from Central.
 
 A converter that is written for a mine keeps working as before. The dependency scopes of the published POMs are those of InterMine's own
 bio sources (see "Dependency scopes in the bio-source POMs" in InterMine's `docs/UPGRADING-build.md`): the types in the converters'
