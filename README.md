@@ -21,8 +21,8 @@ These data sources are built with Gradle 8.14 (the wrapper downloads it) against
 [InterMine](https://github.com/intermine/intermine), which becomes InterMine 6.0.0. They are Java 8 bytecode whatever JDK builds them.
 
 * **JDK 17** runs Gradle (`export JAVA_HOME=...`; 21 also works). JDK 8 still works, with Gradle's deprecation notice.
-* **InterMine artefacts.** `gradle.properties` sets `imVersion` and `bioVersion` to `5.1.1`, the version the `maint-2026` branch
-  publishes until 6.0.0 is released. Until then publish them from an InterMine checkout of `maint-2026` into your local Maven repository
+* **InterMine artefacts.** `gradle.properties` sets `imVersion` and `bioVersion` to `6.0.+`, the 6.0.0 line: the `maint-2026` branch
+  of InterMine is versioned 6.0.0 and publishes `6.0.0`. Until 6.0.0 is on Maven Central, publish them from an InterMine checkout of `maint-2026` into your local Maven repository
   (`~/.m2`), where `mavenLocal()` finds them. The checkout has no `gradle.properties` or `gradle-wrapper.properties` until
   `config/lib/install_intermine.py` has written them, so use that script (it also runs `publishToMavenLocal` in `plugin`, `intermine`, `bio`,
   `bio/sources` and `bio/postprocess`, in that order):
@@ -35,8 +35,7 @@ These data sources are built with Gradle 8.14 (the wrapper downloads it) against
 
   To keep the artefacts apart from your own `~/.m2`, use `./gradlew -Dmaven.repo.local=/some/dir publishToMavenLocal` in each of those builds instead
   and add the same `-Dmaven.repo.local=/some/dir` to every command here.
-  **When 6.0.0 is on Maven Central, change `systemProp.imVersion` and `systemProp.bioVersion` in `gradle.properties` to `6.0.+`**
-  and nothing needs publishing locally any more.
+  **When 6.0.0 is on Maven Central** the same `6.0.+` resolves from there, and nothing needs publishing locally any more.
 * **Tests** run the converters against the `bio-test` database, which is described in `~/.intermine/intermine-bio-test.properties`
   (the file the InterMine CI writes: `config/ci-bio.properties` in this repository is an example, `config/init.sh` creates the
   database and user for PostgreSQL). The build copies that file into the test resources; it does not go into the jars.
@@ -55,9 +54,9 @@ What a CI run needs until InterMine 6.0.0 is published
 ------------------------
 
 The workflow in `.github/workflows` runs `./config/init.sh && ./config/run.sh` on a plain `ubuntu-latest` runner with PostgreSQL. `gradle.properties`
-asks for InterMine `5.1.1` (`imVersion`, `bioVersion`), and that is the version string the `maint-2026` branch of
-[intermine/intermine](https://github.com/intermine/intermine) publishes. Maven Central has no 5.1.1 and no 6.x yet (its newest `org.intermine:plugin`
-is 5.1.0, which is another build), so a CI run resolves `org.intermine:plugin:5.1.1` and the `bio-core`, `intermine-*` artefacts only if they were put in
+asks for InterMine `6.0.+` (`imVersion`, `bioVersion`), which the `maint-2026` branch of
+[intermine/intermine](https://github.com/intermine/intermine) publishes as `6.0.0`. Maven Central has no 6.x yet (its newest `org.intermine:plugin`
+is 5.1.0, which is another build), so a CI run resolves `org.intermine:plugin:6.0.+` and the `bio-core`, `intermine-*` artefacts only if they were put in
 the runner's local Maven repository first. Until 6.0.0 is on Central, a run needs these steps before `./config/init.sh`:
 
 1. JDK 17 (the workflow has it) and Python 3.10 or later: InterMine's `config/lib/install_intermine.py` uses `dataclasses` and `glob(root_dir=...)`.
@@ -71,9 +70,9 @@ the runner's local Maven repository first. Until 6.0.0 is on Central, a run need
 4. PostgreSQL with the `bio-test` database and the `test` user: `./config/init.sh` creates them on the runner (`sudo -u postgres createuser test`, ...),
    as before.
 
-The tests and `checkstyleMain` then run against those artefacts. When 6.0.0 is on Central, change `systemProp.imVersion` and `systemProp.bioVersion`
-in `gradle.properties` to `6.0.+` and steps 1 to 3 go away. The workflow files do not depend on the InterMine checkout; they are unchanged, so a run without these
-steps fails at the first resolution of `org.intermine:plugin:5.1.1` (that is the expected failure until then).
+The tests and `checkstyleMain` then run against those artefacts. When 6.0.0 is on Central, steps 1 to 3 go away (`gradle.properties` already
+asks for `6.0.+`). The workflow files do not depend on the InterMine checkout; they are unchanged, so a run without these
+steps fails at the first resolution of `org.intermine:plugin:6.0.+` (that is the expected failure until then).
 
 A converter that is written for a mine keeps working as before. The dependency scopes of the published POMs are those of InterMine's own
 bio sources (see "Dependency scopes in the bio-source POMs" in InterMine's `docs/UPGRADING-build.md`): the types in the converters'
