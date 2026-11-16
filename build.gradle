@@ -59,9 +59,9 @@ subprojects {
         api group: 'org.intermine', name: 'intermine-objectstore', version: imVersion, transitive: false
         api group: 'org.intermine', name: 'intermine-model', version: imVersion, transitive: false
         api libs.reload4j
-        // org.apache.commons.lang.StringUtils (15 converters). InterMine itself moved to commons-lang3; moving these
-        // converters is a separate change (see README.md)
-        implementation libs.commons.lang
+        // org.apache.commons.lang3.StringUtils (the converters). bio-core is taken with transitive: false, so it is declared here
+        // (bio-core's own POM has it as api). commons-lang 2 is no longer on any classpath of these sources.
+        implementation libs.commons.lang3
 
         // Needed at run time by the plugin's Ant tasks (generateModel, buildUnitTestDB: they run on the project's runtime
         // classpath) and by the unit tests, not to compile: runtimeOnly, so POM scope runtime, as in InterMine's POMs
@@ -69,7 +69,6 @@ subprojects {
         runtimeOnly(libs.hikaricp) { transitive = false }
         runtimeOnly libs.commons.collections // torque
         runtimeOnly libs.commons.io
-        runtimeOnly libs.commons.lang3
         runtimeOnly libs.commons.logging
         runtimeOnly libs.postgresql
         runtimeOnly libs.slf4j.reload4j
