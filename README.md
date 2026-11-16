@@ -14,6 +14,43 @@ This is a repository of all the data parsers used to load human genomic data int
 * [InterMine](http://www.intermine.org)
 * [InterMine Docs](http://intermine.readthedocs.io/en/latest/)
 
+Building (InterMine 6.0 line)
+------------------------
+
+These data sources are built with Gradle 8.14 (the wrapper downloads it) against the `maint-2026` branch of
+[InterMine](https://github.com/intermine/intermine), which becomes InterMine 6.0.0. They are Java 8 bytecode whatever JDK builds them.
+
+* **JDK 17** runs Gradle (`export JAVA_HOME=...`; 21 also works). JDK 8 still works, with Gradle's deprecation notice.
+* **InterMine artefacts.** `gradle.properties` sets `imVersion` and `bioVersion` to `5.1.1`, the version the `maint-2026` branch
+  publishes until 6.0.0 is released. Until then publish them from an InterMine checkout of `maint-2026`, in this order,
+  into your local Maven repository (`~/.m2`), where `mavenLocal()` finds them:
+
+  ```bash
+  cd intermine/plugin       && ./gradlew publishToMavenLocal
+  cd ../intermine           && ./gradlew publishToMavenLocal
+  cd ../bio                 && ./gradlew publishToMavenLocal
+  cd ../bio/sources         && ./gradlew publishToMavenLocal
+  ```
+
+  To keep them apart from your own `~/.m2`, add `-Dmaven.repo.local=/some/dir` to every command here and in the InterMine checkout.
+  **When 6.0.0 is on Maven Central, change `systemProp.imVersion` and `systemProp.bioVersion` in `gradle.properties` to `6.0.+`**
+  and nothing needs publishing locally any more.
+* **Tests** run the converters against the `bio-test` database, which is described in `~/.intermine/intermine-bio-test.properties`
+  (the file the InterMine CI writes: `config/ci-bio.properties` in this repository is an example, `config/init.sh` creates the
+  database and user for PostgreSQL). The build copies that file into the test resources; it does not go into the jars.
+* **Build and test** all sources, with Checkstyle: `./gradlew build`. One source: `./gradlew :bio-source-gtex:build`.
+* **Publish** to the local Maven repository, to build a mine against these sources: `./gradlew publishToMavenLocal`
+  (`./gradlew install` is kept as an alias). The artefacts are `org.intermine:bio-source-<name>:4.3.0`, with a sources and a javadoc jar.
+  In the mine's `project.xml` a `<source>` with `version="4.3.0"` resolves to them.
+* **Maven Central** (a release manager's job, nothing here talks to the network): `SIGNING_KEY="$(gpg --armor --export-secret-keys <KEYID>)"
+  SIGNING_PASSWORD=... ./gradlew centralBundle` signs the publications and writes `build/central-bundle/bio-sources-human-bundle.zip`, which is uploaded
+  to the Central Portal as described in InterMine's `docs/RELEASING.md`. Signing is only done for `centralBundle`, never for local builds.
+
+A converter that is written for a mine keeps working as before. The dependency scopes of the published POMs are those of InterMine's own
+bio sources (see "Dependency scopes in the bio-source POMs" in InterMine's `docs/UPGRADING-build.md`): the types in the converters'
+signatures are `compile`, everything else is `runtime`, so a project that compiles against one of these jars declares the libraries
+it imports itself.
+
 Copyright and Licence
 ------------------------
 
