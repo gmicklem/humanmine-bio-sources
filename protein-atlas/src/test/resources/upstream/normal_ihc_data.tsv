@@ -1,0 +1,25 @@
+Gene	Gene name	Tissue	IHC tissue name	Cell type	Level	Reliability
+ENSG00000007372	PAX6	Adipose tissue	Adipose tissue	adipocytes	Not detected	Enhanced
+ENSG00000007372	PAX6	Adrenal gland	Adrenal gland	glandular cells	Not detected	Enhanced
+ENSG00000007372	PAX6	Appendix	Appendix	endocrine cells	High	Enhanced
+ENSG00000007372	PAX6	Appendix	Appendix	enterocytes	Not detected	Enhanced
+ENSG00000007372	PAX6	Appendix	Appendix	enterocytes - Microvilli	Not detected	Enhanced
+ENSG00000007372	PAX6	Appendix	Appendix	germinal center cells	Not detected	Enhanced
+ENSG00000007372	PAX6	Appendix	Appendix	goblet cells	Not detected	Enhanced
+ENSG00000007372	PAX6	Appendix	Appendix	non-germinal center cells	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Adipose tissue	Adipose tissue	adipocytes	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Adrenal gland	Adrenal gland	glandular cells	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Appendix	Appendix	endocrine cells	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Appendix	Appendix	enterocytes	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Appendix	Appendix	enterocytes - Microvilli	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Appendix	Appendix	goblet cells	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Appendix	Appendix	non-germinal center cells	Not detected	Enhanced
+ENSG00000100197	CYP2D6	Bone marrow	Bone marrow	hematopoietic cells	Not detected	Enhanced
+ENSG00000000003	TSPAN6	Adipose tissue	Adipose tissue	adipocytes	Not detected	Approved
+ENSG00000000003	TSPAN6	Adrenal gland	Adrenal gland	glandular cells	Not detected	Approved
+ENSG00000000003	TSPAN6	Appendix	Appendix	glandular cells	Medium	Approved
+ENSG00000000003	TSPAN6	Appendix	Appendix	lymphoid tissue	Not detected	Approved
+ENSG00000000003	TSPAN6	Bone marrow	Bone marrow	hematopoietic cells	Not detected	Approved
+ENSG00000000003	TSPAN6	Breast	Breast	adipocytes	Not detected	Approved
+ENSG00000000003	TSPAN6	Breast	Breast	glandular cells	High	Approved
+ENSG00000000003	TSPAN6	Breast	Breast	myoepithelial cells	Not detected	Approved
