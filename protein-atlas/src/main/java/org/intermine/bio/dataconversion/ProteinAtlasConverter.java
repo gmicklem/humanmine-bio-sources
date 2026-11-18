@@ -129,6 +129,24 @@ public class ProteinAtlasConverter extends BioFileConverter
             Item tissue = getTissue(tissueName);
             tissue.setAttribute("name", tissueName);
             store(tissue);
+            storedTissues.add(tissueName);
+        }
+    }
+
+    /**
+     * Store the tissues that were not stored through a tissue_to_organ.tsv file (HPA does not
+     * publish one), so that every ProteinAtlasExpression refers to a stored, named Tissue.
+     *
+     * {@inheritDoc}
+     */
+    @Override
+    public void close() throws ObjectStoreException {
+        for (Map.Entry<String, Item> entry : tissues.entrySet()) {
+            if (!storedTissues.contains(entry.getKey())) {
+                entry.getValue().setAttribute("name", entry.getKey());
+                store(entry.getValue());
+                storedTissues.add(entry.getKey());
+            }
         }
     }
 

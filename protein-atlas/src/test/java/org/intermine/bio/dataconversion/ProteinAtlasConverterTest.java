@@ -125,7 +125,8 @@ public class ProteinAtlasConverterTest extends ItemsTestCase
                 tissueRefs.add(item.getReference("tissue").getRefId());
             }
         }
-        assertEquals(new HashSet<String>(Arrays.asList("Adipose tissue", "Adrenal gland", "Appendix")),
+        assertEquals(new HashSet<String>(Arrays.asList("Adipose tissue", "Adrenal gland", "Appendix",
+                "Bone marrow", "Breast")),
                 new HashSet<String>(tissueNames.values()));
         for (String ref : tissueRefs) {
             assertTrue("expression refers to a Tissue that is not stored: " + ref,

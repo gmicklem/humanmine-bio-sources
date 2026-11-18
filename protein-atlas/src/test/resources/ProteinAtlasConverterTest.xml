@@ -39,4 +39,10 @@
         <reference name="gene" ref_id="3_1"/>
         <reference name="tissue" ref_id="6_1"/>
     </item>
+    <item id="6_1" class="Tissue">
+        <attribute name="name" value="Adrenal gland"/>
+    </item>
+    <item id="6_2" class="Tissue">
+        <attribute name="name" value="Appendix"/>
+    </item>
 </items>
