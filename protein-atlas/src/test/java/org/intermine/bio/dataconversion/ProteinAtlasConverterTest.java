@@ -101,6 +101,38 @@ public class ProteinAtlasConverterTest extends ItemsTestCase
         assertEquals("Enhanced", found.getAttribute("reliability").getValue());
     }
 
+    /**
+     * HPA does not publish tissue_to_organ.tsv (it was a home-made file), so with the normal tissue file
+     * alone every ProteinAtlasExpression must still refer to a stored, named Tissue.
+     */
+    public void testTissuesStoredWithoutTissueToOrganFile() throws Exception {
+        MockItemWriter itemWriter = new MockItemWriter(new HashMap<String, Item>());
+        BioFileConverter converter = new ProteinAtlasConverter(itemWriter,
+                Model.getInstanceByName("genomic"));
+        File file = new File(getClass().getClassLoader()
+                .getResource("upstream/normal_ihc_data.tsv").toURI());
+        converter.setCurrentFile(file);
+        converter.process(new FileReader(file));
+        converter.close();
+
+        Map<String, String> tissueNames = new HashMap<String, String>();
+        List<String> tissueRefs = new ArrayList<String>();
+        for (org.intermine.xml.full.Item item : itemWriter.getItems()) {
+            if ("Tissue".equals(item.getClassName())) {
+                assertNotNull("Tissue without a name", item.getAttribute("name"));
+                tissueNames.put(item.getIdentifier(), item.getAttribute("name").getValue());
+            } else if ("ProteinAtlasExpression".equals(item.getClassName())) {
+                tissueRefs.add(item.getReference("tissue").getRefId());
+            }
+        }
+        assertEquals(new HashSet<String>(Arrays.asList("Adipose tissue", "Adrenal gland", "Appendix")),
+                new HashSet<String>(tissueNames.values()));
+        for (String ref : tissueRefs) {
+            assertTrue("expression refers to a Tissue that is not stored: " + ref,
+                    tissueNames.containsKey(ref));
+        }
+    }
+
     @SuppressWarnings("rawtypes")
     protected Collection getExpectedItems() throws Exception {
         return FullParser.parse(getClass().getClassLoader().getResourceAsStream("ProteinAtlasConverterTest.xml"));
