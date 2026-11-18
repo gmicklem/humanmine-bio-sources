@@ -156,7 +156,9 @@ public class HpoConverterTest extends ItemsTestCase
         Map<String, org.intermine.xml.full.Item> terms = byAttribute("HPOTerm", "identifier");
         assertTrue(terms.get("HP:0000526").getCollection("diseases").getRefIds()
                 .contains(diseases.get("OMIM:106210").getIdentifier()));
-        assertEquals(1, items("Ontology").size());
+        assertTrue(byAttribute("Ontology", "name").containsKey("Human Phenotype Ontology"));
+        assertEquals(terms.get("HP:0000526").getReference("ontology").getRefId(),
+                byAttribute("Ontology", "name").get("Human Phenotype Ontology").getIdentifier());
     }
 
     /**

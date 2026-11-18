@@ -19,6 +19,7 @@ import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -47,7 +48,11 @@ public class HpoConverter extends BioDirectoryConverter
 
     private static final String HPOTEAM_FILE = "phenotype_annotation.tab";
     private static final String NEG_FILE = "phenotype_annotation_negated.tab";
+    private static final String HPOA_FILE = "phenotype.hpoa";
     private static final String GENE_FILE = "genes_to_phenotype.txt";
+    private static final String OMIM_PREFIX = "OMIM:";
+    private static final String HPO_ORPHANET_PREFIX = "ORPHA:";
+    private static final String ORPHANET_PREFIX = "ORPHANET:";
     private String omimFile = null;
     private static final String GENE_ENTRY = "Asterisk";
     private static final String GENE_PHENOTYPE_ENTRY = "Plus";
@@ -79,29 +84,50 @@ public class HpoConverter extends BioDirectoryConverter
     public void process(File dataDir) throws Exception {
         Map<String, File> files = readFilesInDir(dataDir);
 
-        String[] requiredFiles = new String[] {HPOTEAM_FILE, NEG_FILE};
+        // current HPO releases have phenotype.hpoa (which includes the negated annotations);
+        // the retired phenotype_annotation.tab and phenotype_annotation_negated.tab are still read
+        boolean current = files.containsKey(HPOA_FILE);
         Set<String> missingFiles = new HashSet<String>();
-        for (String requiredFile : requiredFiles) {
-            if (!files.containsKey(requiredFile)) {
-                missingFiles.add(requiredFile);
+        if (!files.containsKey(GENE_FILE)) {
+            missingFiles.add(GENE_FILE);
+        }
+        if (!current) {
+            for (String requiredFile : new String[] {HPOTEAM_FILE, NEG_FILE}) {
+                if (!files.containsKey(requiredFile)) {
+                    missingFiles.add(requiredFile);
+                }
             }
         }
 
         if (!missingFiles.isEmpty()) {
-            throw new RuntimeException("Not all required files for the OMIM sources were found in: "
-                    + dataDir.getAbsolutePath() + ", was missing " + missingFiles);
+            throw new RuntimeException("Not all required files for the HPO annotation source were "
+                    + "found in: " + dataDir.getAbsolutePath() + ", was missing " + missingFiles
+                    + " (or " + HPOA_FILE + " instead of the two annotation files)");
+        }
+        if (!current && omimFile == null) {
+            throw new IllegalArgumentException("The retired HPO annotation files list OMIM genes "
+                    + "as well as diseases, set hpo.disease.file to OMIM's mimTitles.txt");
         }
 
         ontologyItemId = storeOntology();
-        processOMIMFile(new FileReader(omimFile));
+        if (omimFile != null) {
+            processOMIMFile(new FileReader(omimFile));
+        }
         processGeneFile(new FileReader(files.get(GENE_FILE)));
-        processAnnotationFile(new FileReader(files.get(HPOTEAM_FILE)));
-        processAnnotationFile(new FileReader(files.get(NEG_FILE)));
+        if (current) {
+            processHpoaFile(new FileReader(files.get(HPOA_FILE)));
+        } else {
+            processAnnotationFile(new FileReader(files.get(HPOTEAM_FILE)));
+            processAnnotationFile(new FileReader(files.get(NEG_FILE)));
+        }
     }
 
     /**
-     * HPO lists all OMIM IDs whether they are genes or diseases. There is no way to differeniate
-     * the two. So instead we use the OMIM file which does label diseases and genes correctly.
+     * HPO lists all OMIM IDs whether they are genes or diseases in the retired files. There is no
+     * way to differeniate the two. So instead we use the OMIM file which does label diseases and
+     * genes correctly. The current phenotype.hpoa and genes_to_phenotype.txt only list diseases,
+     * so this file is optional for them: if it is set, OMIM entries not listed as diseases in it
+     * are still skipped.
      *
      * @param fileName name of OMIM file that lists all diseases and OMIM identifiers
      */
@@ -131,11 +157,14 @@ public class HpoConverter extends BioDirectoryConverter
         while (lineIter.hasNext()) {
             String[] line = (String[]) lineIter.next();
 
-            if (line[0].startsWith("#")) {
+            // the retired file has a comment line first, the current one a column header
+            if (line[0].startsWith("#") || "ncbi_gene_id".equals(line[0])) {
                 continue;
             }
 
-            String diseaseId = line[8];
+            // gene id, symbol, HPO id, HPO name, ...; the disease is the last column (the ninth
+            // in the retired file, the sixth since 2023)
+            String diseaseId = line[line.length - 1];
             String identifier = line[0];
             String hpoId = line[2];
 
@@ -152,16 +181,25 @@ public class HpoConverter extends BioDirectoryConverter
         }
     }
 
-    private Item getDisease(String omimId) {
-        // only create diseases that are really diseases not genes.
-        if (!omimDiseaseMasterList.contains(omimId)) {
+    private Item getDisease(String diseaseId) {
+        String identifier = null;
+        if (diseaseId.startsWith(OMIM_PREFIX)) {
+            // only create diseases that are really diseases not genes (if we can tell).
+            if (omimFile == null || omimDiseaseMasterList.contains(diseaseId)) {
+                identifier = diseaseId;
+            }
+        } else if (diseaseId.startsWith(HPO_ORPHANET_PREFIX)) {
+            // HPO's ORPHA:166024 is ORPHANET:166024 in the orphanet source
+            identifier = ORPHANET_PREFIX + diseaseId.substring(HPO_ORPHANET_PREFIX.length());
+        }
+        if (identifier == null) {
             return null;
         }
-        Item item = diseases.get(omimId);
+        Item item = diseases.get(identifier);
         if (item == null) {
             item = createItem("Disease");
-            item.setAttribute("primaryIdentifier", omimId);
-            diseases.put(omimId, item);
+            item.setAttribute("primaryIdentifier", identifier);
+            diseases.put(identifier, item);
         }
         return item;
     }
@@ -225,46 +263,87 @@ public class HpoConverter extends BioDirectoryConverter
             // HPO:curators
             String assignedBy = array[13];
 
-            String evidenceCodeRefId = getEvidenceCode(evidenceCode);
+            storeAnnotation(dbId, qualifier, hpoIdentifier, dbRef, evidenceCode, frequency,
+                    assignedBy);
+        }
+    }
 
-            Item disease = getDisease(dbId);
-            if (disease == null) {
-                // whoops this is a gene. genes have OMIM IDs too. ignore.
+    /**
+     * Read the current phenotype.hpoa: tab delimited, comment lines start with #, then a column
+     * header line, then database_id (e.g. OMIM:100200, ORPHA:166024, DECIPHER:16), disease_name,
+     * qualifier (NOT or empty), hpo_id, reference, evidence, onset, frequency, sex, modifier,
+     * aspect and biocuration (e.g. HPO:probinson[2021-03-23]). Negated annotations are in this
+     * file. Disease name, onset, sex, modifier and aspect are not stored.
+     *
+     * @param reader file reader
+     * @throws IOException if can't read file
+     * @throws ObjectStoreException if can't store to db
+     */
+    protected void processHpoaFile(Reader reader) throws IOException, ObjectStoreException {
+        Iterator<String[]> lineIter = FormattedTextParser.parseTabDelimitedReader(
+                new BufferedReader(reader));
+        while (lineIter.hasNext()) {
+            String[] array = lineIter.next();
+            if (array[0].startsWith("#") || "database_id".equals(array[0])) {
                 continue;
             }
-            Item evidence = createItem("HPOEvidence");
-            evidence.setReference("diseaseReference", disease);
-            if (dbRef.isEmpty()) {
-                dbRef = dbId;
+            if (array.length < 12) {
+                throw new IllegalArgumentException("Not enough elements (should be 12 not "
+                        + array.length + ")");
             }
-            evidence.setAttribute("source", dbRef);
-            if (StringUtils.isNotEmpty(dbRef)) {
-                String[] bits = dbRef.split(";");
-                for (String bit : bits) {
-                    if (bit.toUpperCase().startsWith("PMID")) {
-                        String refId = getPublication(bit);
-                        if (refId != null) {
-                            evidence.addToCollection("publications", refId);
-                        }
+            // curators with their dates, the dates are dropped as they were in the retired files
+            Set<String> curators = new LinkedHashSet<String>();
+            for (String curator : array[11].split(";")) {
+                String name = curator.replaceAll("\\[.*\\]", "").trim();
+                if (!name.isEmpty()) {
+                    curators.add(name);
+                }
+            }
+            storeAnnotation(array[0], array[2], array[3], array[4], array[5], array[7],
+                    StringUtils.join(curators, ";"));
+        }
+    }
+
+    private void storeAnnotation(String dbId, String qualifier, String hpoIdentifier,
+            String dbRef, String evidenceCode, String frequency, String assignedBy)
+        throws ObjectStoreException {
+        String evidenceCodeRefId = getEvidenceCode(evidenceCode);
+
+        Item disease = getDisease(dbId);
+        if (disease == null) {
+            // whoops this is a gene. genes have OMIM IDs too. ignore.
+            return;
+        }
+        Item evidence = createItem("HPOEvidence");
+        evidence.setReference("diseaseReference", disease);
+        if (dbRef.isEmpty()) {
+            dbRef = dbId;
+        }
+        evidence.setAttribute("source", dbRef);
+        if (StringUtils.isNotEmpty(dbRef)) {
+            String[] bits = dbRef.split(";");
+            for (String bit : bits) {
+                if (bit.toUpperCase().startsWith("PMID")) {
+                    String refId = getPublication(bit);
+                    if (refId != null) {
+                        evidence.addToCollection("publications", refId);
                     }
                 }
             }
-
-            evidence.setReference("code", evidenceCodeRefId);
-            if (!frequency.isEmpty()) {
-                evidence.setAttribute("frequencyModifier", frequency);
-            }
-            if (!assignedBy.isEmpty()) {
-                evidence.setAttribute("assignedBy", assignedBy);
-            }
-            store(evidence);
-
-            Item annotation = getAnnotation(hpoIdentifier, dbId, qualifier);
-            annotation.addToCollection("evidences", evidence);
-            if (disease != null) {
-                disease.addToCollection("hpoAnnotations", annotation);
-            }
         }
+
+        evidence.setReference("code", evidenceCodeRefId);
+        if (!frequency.isEmpty()) {
+            evidence.setAttribute("frequencyModifier", frequency);
+        }
+        if (!assignedBy.isEmpty()) {
+            evidence.setAttribute("assignedBy", assignedBy);
+        }
+        store(evidence);
+
+        Item annotation = getAnnotation(hpoIdentifier, dbId, qualifier);
+        annotation.addToCollection("evidences", evidence);
+        disease.addToCollection("hpoAnnotations", annotation);
     }
 
     private Item getAnnotation(String hpoId, String diseaseId, String qualifier)
