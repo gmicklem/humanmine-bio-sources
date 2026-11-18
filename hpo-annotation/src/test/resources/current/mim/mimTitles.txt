@@ -1,0 +1,9 @@
+# SYNTHETIC test file in the layout of OMIM mimTitles.txt; the entries are invented.
+Prefix	Mim Number	Preferred Title; symbol	Alternative Title(s); symbol(s)	Included Title(s); symbols
+Number Sign	106210	SYNTHETIC DISEASE ONE; SD1		
+Number Sign	604229	SYNTHETIC DISEASE TWO; SD2		
+Number Sign	608902	SYNTHETIC DISEASE THREE; SD3		
+Percent	243400	SYNTHETIC DISEASE FOUR WITH A MAPPED LOCUS		
+Asterisk	120200	SYNTHETIC GENE ENTRY ONE; SG1		
+Plus	136520	SYNTHETIC GENE AND PHENOTYPE ENTRY; SG2		
+Caret	120430	MOVED TO 120200		
