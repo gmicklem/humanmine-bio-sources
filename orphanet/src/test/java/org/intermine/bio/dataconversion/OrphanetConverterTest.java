@@ -68,4 +68,27 @@ public class OrphanetConverterTest extends ItemsTestCase
         Set<org.intermine.xml.full.Item> expected = readItemSet("OrphanetConverterTest_tgt.xml");
         assertEquals(expected, itemWriter.getItems());
     }
+
+    /**
+     * Three disorders cut verbatim from the current Orphadata en_product1.xml
+     * (JDBOR 1.3.42, 2026-06-23); see src/test/resources/current/README.txt.
+     * @throws Exception if the test fails
+     */
+    public void testProcessCurrentFormat() throws Exception {
+        String current = "current/" + fileName;
+        File testFile = new File(getClass().getClassLoader()
+                .getResource(current).toURI());
+
+        Reader reader = new InputStreamReader(getClass().getClassLoader()
+                .getResourceAsStream(current));
+
+        converter.setCurrentFile(testFile);
+        converter.process(reader);
+
+        converter.close();
+
+        Set<org.intermine.xml.full.Item> expected =
+                readItemSet("OrphanetConverterCurrentTest_tgt.xml");
+        assertEquals(expected, itemWriter.getItems());
+    }
 }
