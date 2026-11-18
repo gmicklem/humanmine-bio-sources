@@ -65,7 +65,11 @@ public class ProteinAtlasRNAConverter extends BioFileConverter
     @Override
     public void process(Reader reader) throws Exception {
         File currentFile = getCurrentFile();
-        if ("rna_tissue.tsv".equals(currentFile.getName())) {
+        // rna_tissue_consensus.tsv (Gene, Gene name, Tissue, nTPM) replaced rna_tissue.tsv
+        // (Gene, Gene name, Sample, Value, Unit) at HPA: tissue and value are columns 2 and 3
+        // in both
+        if ("rna_tissue.tsv".equals(currentFile.getName())
+                || "rna_tissue_consensus.tsv".equals(currentFile.getName())) {
             processTissue(reader);
         } else {
             throw new RuntimeException("Don't know how to process file: " + currentFile.getName());
