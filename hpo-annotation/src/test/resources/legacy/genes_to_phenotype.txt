@@ -1,0 +1,3 @@
+#Format: entrez-gene-id<tab>entrez-gene-symbol<tab>HPO-Term-ID<tab>HPO-Term-Name<tab>Frequency-Raw<tab>Frequency-HPO<tab>Additional Info from G-D source<tab>G-D source<tab>disease-ID for link
+57107	PDSS2	HP:0002133	Status epilepticus	-	-	-	-	OMIM:614652
+57107	PDSS2	HP:0000093	Proteinuria	-	-	-	-	OMIM:125853
