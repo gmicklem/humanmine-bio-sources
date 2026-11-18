@@ -180,8 +180,8 @@ public class GtexConverter extends BioDirectoryConverter
         while (lineIter.hasNext()) {
             String[] line = lineIter.next();
 
-            // process header
-            if ("gene_id".equals(line[0])) {
+            // process header: the first cell is gene_id in v7 and Name in v8
+            if ("gene_id".equals(line[0]) || "Name".equals(line[0])) {
                 headers = line;
             }
             // keep going until we find the column heading

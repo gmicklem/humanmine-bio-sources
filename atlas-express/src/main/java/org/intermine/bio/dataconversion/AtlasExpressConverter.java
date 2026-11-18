@@ -39,6 +39,11 @@ public class AtlasExpressConverter extends BioFileConverter
 
     private static final String EXPRESSION_TYPE = "FPKM value";
 
+    // the assay groups g1..g16 of E-MTAB-513, from its configuration.xml
+    private static final String[] ASSAY_GROUPS = {"leukocyte", "lymph node", "ovary", "breast",
+        "kidney", "liver", "skeletal muscle", "heart", "brain", "prostate", "lung", "thyroid",
+        "colon", "testis", "adipose", "adrenal"};
+
     /**
      * Constructor
      * @param writer the ItemWriter used to handle the resultant items
@@ -68,6 +73,7 @@ public class AtlasExpressConverter extends BioFileConverter
 
         // parse header
         String[] header = (String[]) lineIter.next();
+        String expressionType = getExpressionType();
 
         // each gene is on a new line
         while (lineIter.hasNext()) {
@@ -83,13 +89,13 @@ public class AtlasExpressConverter extends BioFileConverter
             // skip first two columns, gene name
             for (int i = 2; i < header.length; i++) {
 
-                String tissue = header[i];
+                String tissue = getConditionName(header[i]);
                 String expression = line[i];
                 if (expression != null && !expression.isEmpty()) {
                     Item item = createItem("AtlasExpression");
-                    item.setAttribute("type", EXPRESSION_TYPE);
+                    item.setAttribute("type", expressionType);
                     item.setAttribute("condition", tissue);
-                    item.setAttribute("expression", expression);
+                    item.setAttribute("expression", getMedian(expression));
                     item.setReference("gene", geneId);
                     store(item);
                 }
@@ -97,6 +103,35 @@ public class AtlasExpressConverter extends BioFileConverter
         }
     }
 
+    // the -tpms.tsv file holds TPM, the -fpkms.tsv file (and any other name) FPKM
+    private String getExpressionType() {
+        if (getCurrentFile() != null && getCurrentFile().getName().contains("tpm")) {
+            return "TPM value";
+        }
+        return EXPRESSION_TYPE;
+    }
+
+    // The current files name the columns g1..g16, the assay groups of E-MTAB-513 (see
+    // E-MTAB-513-configuration.xml); a file with tissue names in its header is used as it is.
+    private static String getConditionName(String column) {
+        if (column.matches("g[0-9]+")) {
+            int group = Integer.parseInt(column.substring(1));
+            if (group >= 1 && group <= ASSAY_GROUPS.length) {
+                return ASSAY_GROUPS[group - 1];
+            }
+        }
+        return column;
+    }
+
+    // The current files have five comma separated values per cell (min, lower quartile, median,
+    // upper quartile, max); a single value is used as it is.
+    private static String getMedian(String cell) {
+        String[] values = cell.split(",");
+        if (values.length == 5) {
+            return values[2];
+        }
+        return cell;
+    }
 
     private String getGeneId(String primaryIdentifier) throws ObjectStoreException {
         String resolvedIdentifier = resolveGene(primaryIdentifier);
