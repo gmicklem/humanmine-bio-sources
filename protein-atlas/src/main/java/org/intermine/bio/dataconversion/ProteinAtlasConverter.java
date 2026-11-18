@@ -79,7 +79,9 @@ public class ProteinAtlasConverter extends BioFileConverter
     @Override
     public void process(Reader reader) throws Exception {
         File currentFile = getCurrentFile();
-        if ("normal_tissue.tsv".equals(currentFile.getName())) {
+        // normal_ihc_data.tsv is the current name of HPA's normal_tissue.tsv
+        if ("normal_tissue.tsv".equals(currentFile.getName())
+                || "normal_ihc_data.tsv".equals(currentFile.getName())) {
             processNormalTissue(reader);
         } else if ("tissue_to_organ.tsv".equals(currentFile.getName())) {
             processTissueToOrgan(reader);
@@ -143,7 +145,14 @@ public class ProteinAtlasConverter extends BioFileConverter
         // 3 - high/ supportive
 
         Iterator<?> lineIter = FormattedTextParser.parseTabDelimitedReader(reader);
-        lineIter.next();  // discard header
+        // The current normal_ihc_data.tsv has the columns Gene, Gene name, Tissue, IHC tissue name,
+        // Cell type, Level, Reliability, so find the columns by header name; the positions of the
+        // old six column file are the default
+        String[] header = (String[]) lineIter.next();
+        int tissueCol = columnIndex(header, "Tissue", 2);
+        int cellTypeCol = columnIndex(header, "Cell type", 3);
+        int levelCol = columnIndex(header, "Level", 4);
+        int reliabilityCol = columnIndex(header, "Reliability", 5);
 
         while (lineIter.hasNext()) {
             String[] line = (String[]) lineIter.next();
@@ -152,12 +161,12 @@ public class ProteinAtlasConverter extends BioFileConverter
             if (StringUtils.isEmpty(geneId)) {
                 continue;
             }
-            String capitalisedTissueName = StringUtils.capitalize(line[2]);
+            String capitalisedTissueName = StringUtils.capitalize(line[tissueCol]);
             Item tissueId = getTissue(capitalisedTissueName);
 
-            String cellType = line[3];
-            String level = line[4];
-            String reliability = line[5];
+            String cellType = line[cellTypeCol];
+            String level = line[levelCol];
+            String reliability = line[reliabilityCol];
 
 //            level = alterLevel(level, expressionType);
 //            reliability = alterReliability(reliability, expressionType);
@@ -171,6 +180,15 @@ public class ProteinAtlasConverter extends BioFileConverter
             expression.setReference("tissue", tissueId);
             store(expression);
         }
+    }
+
+    private static int columnIndex(String[] header, String name, int defaultIndex) {
+        for (int i = 0; i < header.length; i++) {
+            if (name.equalsIgnoreCase(header[i].trim())) {
+                return i;
+            }
+        }
+        return defaultIndex;
     }
 
     private void processAllInOneXML(File file)
