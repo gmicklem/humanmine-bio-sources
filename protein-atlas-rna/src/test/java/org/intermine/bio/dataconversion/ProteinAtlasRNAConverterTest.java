@@ -11,10 +11,14 @@ package org.intermine.bio.dataconversion;
  */
 
 import java.io.File;
+import java.io.FileReader;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
 import org.intermine.dataconversion.ItemsTestCase;
 import org.intermine.dataconversion.MockItemWriter;
@@ -53,6 +57,46 @@ public class ProteinAtlasRNAConverterTest extends ItemsTestCase
         writeItemsFile(itemWriter.getItems(), "protein-atlas-rna-tgt.xml");
 
         assertEquals(readItemSet("ProteinAtlasRNAConverterTest-tgt.xml"), itemWriter.getItems());
+    }
+
+    /**
+     * A cut of the current upstream https://www.proteinatlas.org/download/tsv/rna_tissue_consensus.tsv.zip
+     * (see src/test/resources/upstream/README.md): Gene, Gene name, Tissue, nTPM.
+     */
+    public void testProcessConsensusFile() throws Exception {
+        MockItemWriter itemWriter = new MockItemWriter(new HashMap<String, Item>());
+        BioFileConverter converter = new ProteinAtlasRNAConverter(itemWriter,
+                Model.getInstanceByName("genomic"));
+        File file = new File(getClass().getClassLoader()
+                .getResource("upstream/rna_tissue_consensus.tsv").toURI());
+        converter.setCurrentFile(file);
+        converter.process(new FileReader(file));
+        converter.close();
+
+        Map<String, String> genes = new HashMap<String, String>();
+        List<org.intermine.xml.full.Item> results = new ArrayList<org.intermine.xml.full.Item>();
+        for (org.intermine.xml.full.Item item : itemWriter.getItems()) {
+            if ("Gene".equals(item.getClassName())) {
+                genes.put(item.getIdentifier(), item.getAttribute("primaryIdentifier").getValue());
+            } else if ("RNASeqResult".equals(item.getClassName())) {
+                results.add(item);
+            }
+        }
+        // 4 genes with 8 tissues each
+        assertEquals(32, results.size());
+        assertEquals(4, genes.size());
+
+        // PAX6 in amygdala: 16.5 nTPM
+        org.intermine.xml.full.Item found = null;
+        for (org.intermine.xml.full.Item r : results) {
+            if ("ENSG00000007372".equals(genes.get(r.getReference("gene").getRefId()))
+                    && "amygdala".equals(r.getAttribute("tissue").getValue())) {
+                found = r;
+            }
+        }
+        assertNotNull("no PAX6 amygdala result", found);
+        assertEquals("16.5", found.getAttribute("expressionScore").getValue());
+        assertEquals("TPM", found.getAttribute("expressionType").getValue());
     }
 
     @SuppressWarnings("rawtypes")
