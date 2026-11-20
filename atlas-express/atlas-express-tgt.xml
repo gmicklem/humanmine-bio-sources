@@ -119,6 +119,7 @@
 <attribute name="url" value="http://www.sequenceontology.org"/>
 </item>
 <item id="2_1" class="DataSet">
+<attribute name="licence" value="https://creativecommons.org/licenses/by/4.0/"/>
 <attribute name="name" value="E-MTAB-513 illumina body map"/>
 <reference name="dataSource" ref_id="1_1"/>
 </item>

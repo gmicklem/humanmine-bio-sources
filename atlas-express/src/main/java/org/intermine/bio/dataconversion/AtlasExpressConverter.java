@@ -32,6 +32,9 @@ public class AtlasExpressConverter extends BioFileConverter
 {
     private static final String DATASET_TITLE = "atlas-express";
     private static final String DATA_SOURCE_NAME = "ArrayExpress";
+    // Expression Atlas data are CC BY 4.0; licence page read 2026-11-18:
+    // https://www.ebi.ac.uk/gxa/licence.html
+    private static final String LICENCE = "https://creativecommons.org/licenses/by/4.0/";
     private Map<String, String> genes = new HashMap<String, String>();
     protected IdResolver rslv;
     private static final String TAXON_ID = "9606";
@@ -50,7 +53,7 @@ public class AtlasExpressConverter extends BioFileConverter
      * @param model the Model
      */
     public AtlasExpressConverter(ItemWriter writer, Model model) {
-        super(writer, model, DATA_SOURCE_NAME, DATASET_TITLE);
+        super(writer, model, DATA_SOURCE_NAME, DATASET_TITLE, LICENCE);
         if (rslv == null) {
             rslv = IdResolverService.getIdResolverByOrganism(TAXON_ID);
         }

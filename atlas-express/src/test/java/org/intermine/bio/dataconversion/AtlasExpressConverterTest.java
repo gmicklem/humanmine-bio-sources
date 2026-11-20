@@ -117,4 +117,18 @@ public class AtlasExpressConverterTest extends ItemsTestCase
         assertEquals("58", found.getAttribute("expression").getValue());
         assertEquals("TPM value", found.getAttribute("type").getValue());
     }
+
+    /** The data set carries the licence Expression Atlas states (CC BY 4.0). */
+    public void testDataSetLicence() throws Exception {
+        convert("upstream/E-MTAB-513-fpkms.tsv");
+        int dataSets = 0;
+        for (org.intermine.xml.full.Item item : itemWriter.getItems()) {
+            if ("DataSet".equals(item.getClassName())) {
+                dataSets++;
+                assertEquals("https://creativecommons.org/licenses/by/4.0/",
+                        item.getAttribute("licence").getValue());
+            }
+        }
+        assertEquals(1, dataSets);
+    }
 }
