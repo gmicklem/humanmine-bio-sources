@@ -1,0 +1,5 @@
+# Cut on 2026-11-20 from https://www.informatics.jax.org/downloads/reports/MGI_QTLAllele.rpt (Mouse Genome Informatics, CC BY 4.0).
+# A few complete rows, unchanged; the columns are those of https://www.informatics.jax.org/downloads/reports/index.html#pheno
+MGI:3042398	Aabpr<NZB/Slc>	NZB/Slc	QTL	14695357	MGI:3042396	Aabpr			2	116033229	122207534	GRCm39	MP:0005384,MP:0005387,MP:0005397
+MGI:3573908	Aaj1<A/J>	A/J	QTL	15371360	MGI:3573901	Aaj1			1	180832317	191851043	GRCm39	MP:0005386
+MGI:5823894	Aaaq1<129S6/SvEvTac>	129S6/SvEvTac	QTL	20133902	MGI:5823834	Aaaq1			1	126495943	126495943	GRCm39	

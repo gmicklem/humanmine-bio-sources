@@ -41,6 +41,27 @@ public class MgiAllelesConverter extends BioFileConverter
     private Map<String, String> terms = new HashMap<String, String>();
     private Map<String, Item> alleles = new HashMap<String, Item>();
 
+    private static final String REPORTS_URL =
+            "https://www.informatics.jax.org/downloads/reports/index.html#pheno";
+
+    // The documented column layouts (REPORTS_URL, checked 20 Nov 2026). The reports have no header
+    // line, so the converter checks the column count and the content of the columns it reads.
+    private static final String[] PHENOTYPIC_ALLELE_COLUMNS = {"MGI Allele Accession ID",
+        "Allele Symbol", "Allele Name", "Allele Type", "Allele Attribute",
+        "PubMed ID for original reference", "MGI Marker Accession ID", "Marker Symbol",
+        "Marker RefSeq ID", "Marker Ensembl ID",
+        "High-level Mammalian Phenotype ID (comma-delimited)", "Synonyms (|-delimited)",
+        "Marker Name"};
+    private static final String[] QTL_ALLELE_COLUMNS = {"MGI Allele Accession ID",
+        "Allele Symbol", "Allele Name", "Allele Type", "PubMed ID for original reference",
+        "MGI Marker Accession ID", "Marker Symbol", "Marker RefSeq ID", "Marker Ensembl ID",
+        "Marker Chromosome", "Marker Start Coordinate", "Marker End Coordinate", "Genome Build",
+        "High-level Mammalian Phenotype ID (comma-delimited)"};
+    private static final String[] PHENO_GENO_COLUMNS = {"Allelic Composition",
+        "Allele Symbols (pipe-delimited)", "Genetic Background", "Mammalian Phenotype ID",
+        "PubMed IDs (pipe-delimited)", "MGI Marker Accession IDs (pipe-delimited)",
+        "MGI Genotype Accession ID"};
+
     private Item ontology;
     private String organismIdentifier;
 
@@ -89,13 +110,25 @@ public class MgiAllelesConverter extends BioFileConverter
         String lastGenotypeName = null;
         Item currentGenotype = null;
         Iterator<?> lineIter = FormattedTextParser.parseTabDelimitedReader(reader);
+        int row = 0;
         while (lineIter.hasNext()) {
             String[] line = (String[]) lineIter.next();
+            row++;
+            if (isBlankLine(line)) {
+                continue;
+            }
+            checkColumns(line, PHENO_GENO_COLUMNS, row);
+            checkColumn(line, PHENO_GENO_COLUMNS, 3, "MP:", false, row);
+            if (!line[4].matches("[0-9|]*")) {
+                throw layoutError(PHENO_GENO_COLUMNS, row, "column 5 (" + PHENO_GENO_COLUMNS[4]
+                        + ") should hold digits and '|' only, found '" + line[4] + "'");
+            }
+            checkColumn(line, PHENO_GENO_COLUMNS, 5, "MGI:", true, row);
             String genotypeName = line[0];
             String alleleStr = line[1];
             String background = line[2];
             String termId = line[3];
-            String geneStr = line[4];
+            String geneStr = line[5];
 
             if (!genotypeName.equals(lastGenotypeName)) {
                 // store
@@ -136,7 +169,8 @@ public class MgiAllelesConverter extends BioFileConverter
     private String determineZygosity(String[] alleleSymbols, String geneStr) {
         if (alleleSymbols.length == 1) {
             return "homozygote";
-        } else if (!StringUtils.isBlank(geneStr) && geneStr.contains(",")) {
+        } else if (!StringUtils.isBlank(geneStr)
+                && (geneStr.contains("|") || geneStr.contains(","))) {
             return "complex: > 1 genome feature";
         } else if (alleleSymbols.length == 2 && !(alleleSymbols[0].equals(alleleSymbols[1]))) {
             return "heterozygote";
@@ -153,9 +187,18 @@ public class MgiAllelesConverter extends BioFileConverter
             store(ontology);
         }
 
+        String[] columns = isQTLfile ? QTL_ALLELE_COLUMNS : PHENOTYPIC_ALLELE_COLUMNS;
         Iterator<?> lineIter = FormattedTextParser.parseTabDelimitedReader(reader);
+        int row = 0;
         while (lineIter.hasNext()) {
             String[] line = (String[]) lineIter.next();
+            row++;
+            if (isBlankLine(line)) {
+                continue;
+            }
+            checkColumns(line, columns, row);
+            checkColumn(line, columns, isQTLfile ? 5 : 6, "MGI:", true, row);
+            checkColumn(line, columns, isQTLfile ? 13 : 10, "MP:", true, row);
             String alleleIdentifier = line[0];
             String alleleSymbol = line[1];
             String alleleName = line[2];
@@ -169,16 +212,12 @@ public class MgiAllelesConverter extends BioFileConverter
                 alleleType = line[3];
                 pubmed = line[4];
                 geneIdentifier = line[5];
-                if (line.length >= 9) {
-                    termsStr = line[8];
-                }
+                termsStr = line[13];
             } else {
                 alleleType = line[3] + ", " + line[4];
                 pubmed = line[5];
                 geneIdentifier = line[6];
-                if (line.length >= 10) {
-                    termsStr = line[9];
-                }
+                termsStr = line[10];
             }
 
 
@@ -210,6 +249,36 @@ public class MgiAllelesConverter extends BioFileConverter
                     allele.addToCollection("highLevelPhenotypeTerms", getTermItemId(termId));
                 }
             }
+        }
+    }
+
+    private static boolean isBlankLine(String[] line) {
+        return line.length == 1 && StringUtils.isBlank(line[0]);
+    }
+
+    private IllegalStateException layoutError(String[] columns, int row, String problem) {
+        return new IllegalStateException(getCurrentFile().getName() + ", data row " + row + ": "
+                + problem
+                + ". The converter expects " + columns.length + " columns: "
+                + StringUtils.join(columns, "; ") + " (see " + REPORTS_URL + ")."
+                + " MGI may have changed the file; the converter needs updating.");
+    }
+
+    private void checkColumns(String[] line, String[] columns, int row) {
+        if (line.length != columns.length) {
+            throw layoutError(columns, row, "found " + line.length + " columns, expected "
+                    + columns.length + " columns");
+        }
+    }
+
+    // a column whose content is known: empty (if allowed) or starting with the prefix
+    private void checkColumn(String[] line, String[] columns, int index, String prefix,
+            boolean mayBeEmpty, int row) {
+        String value = line[index];
+        if (StringUtils.isBlank(value) ? !mayBeEmpty : !value.startsWith(prefix)) {
+            throw layoutError(columns, row, "column " + (index + 1) + " (" + columns[index]
+                    + ") should " + (mayBeEmpty ? "be empty or " : "") + "start with '" + prefix
+                    + "', found '" + value + "'");
         }
     }
 
