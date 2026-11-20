@@ -109,6 +109,7 @@
 <collection name="dataSets"><reference ref_id="2_1"/></collection>
 </item>
 <item id="2_2" class="DataSet">
+<attribute name="licence" value="https://www.gtexportal.org/home/license"/>
 <attribute name="name" value="Single-Tissue cis-eQTL Data"/>
 <reference name="dataSource" ref_id="1_1"/>
 </item>
@@ -224,6 +225,7 @@
 <collection name="dataSets"><reference ref_id="2_1"/></collection>
 </item>
 <item id="2_1" class="DataSet">
+<attribute name="licence" value="https://www.gtexportal.org/home/license"/>
 <attribute name="name" value="RNA-Seq Data"/>
 <reference name="dataSource" ref_id="1_1"/>
 </item>
