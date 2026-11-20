@@ -98,7 +98,7 @@ public class MgiAllelesConverterTest extends TestCase
         org.intermine.xml.full.Item komp = find("Allele", "symbol",
                 "1110059G10Rik<tm1a(KOMP)Wtsi>");
         assertEquals("MGI:4419470", komp.getAttribute("primaryIdentifier").getValue());
-        assertEquals("Targeted, Conditional ready|Null/knockout",
+        assertEquals("Targeted, Conditional ready|Null/knockout|Reporter",
                 komp.getAttribute("type").getValue());
         assertEquals(set("MP:0005390"), termIds(komp, "highLevelPhenotypeTerms"));
         assertEquals("MGI:1913452", byIdentifier().get(komp.getReference("gene").getRefId())
