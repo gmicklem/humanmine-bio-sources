@@ -1,0 +1,7 @@
+# Cut on 2026-11-20 from https://www.informatics.jax.org/downloads/reports/MGI_PhenoGenoMP.rpt (Mouse Genome Informatics, CC BY 4.0).
+# A few complete rows, unchanged; the columns are those of https://www.informatics.jax.org/downloads/reports/index.html#pheno
+Gli3<Xt-J>/Gli3<Xt-J>	Gli3<Xt-J>	involves: C3H * CD-1	MP:0000562	8387379|9006072	MGI:95729	MGI:2166944
+Alx4<tm1Rwi>/Alx4<+>,Bmp4<tm1Blh>/Bmp4<+>	Alx4<tm1Rwi>|Bmp4<tm1Blh>|Alx4<+>|Bmp4<+>	involves: 129S2/SvPas * 129S6/SvEvTac * C57BL/6	MP:0000562	9268572	MGI:108359|MGI:88180	MGI:2166749
+Wnt1<tm1Brd>/Wnt1<tm1Brd>,Wnt3a<tm1Amc>/Wnt3a<tm1Amc>	Wnt3a<tm1Amc>|Wnt1<tm1Brd>	involves: 129S1/Sv * 129S7/SvEvBrd	MP:0000737	9811581	MGI:98953|MGI:98956	MGI:2166755
+Wnt1<tm1Brd>/Wnt1<tm1Brd>,Wnt3a<tm1Amc>/Wnt3a<tm1Amc>	Wnt3a<tm1Amc>|Wnt1<tm1Brd>	involves: 129S1/Sv * 129S7/SvEvBrd	MP:0002260	9353119	MGI:98953|MGI:98956	MGI:2166755
+Kdr<tm1Jrt>/Kdr<+>	Kdr<tm1Jrt>|Kdr<+>	involves: 129S1/Sv * 129X1/SvJ	MP:0002169	7596435	MGI:96683	MGI:2167319

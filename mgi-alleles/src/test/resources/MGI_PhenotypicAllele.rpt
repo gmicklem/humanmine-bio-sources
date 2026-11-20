@@ -1,0 +1,5 @@
+# Cut on 2026-11-20 from https://www.informatics.jax.org/downloads/reports/MGI_PhenotypicAllele.rpt (Mouse Genome Informatics, CC BY 4.0).
+# A few complete rows, unchanged; the columns are those of https://www.informatics.jax.org/downloads/reports/index.html#pheno
+MGI:4419470	1110059G10Rik<tm1a(KOMP)Wtsi>	targeted mutation 1a, Wellcome Trust Sanger Institute	Targeted	Conditional ready|Null/knockout|Reporter		MGI:1913452	1110059G10Rik	NM_025419	ENSMUSG00000032551	MP:0005390		RIKEN cDNA 1110059G10 gene
+MGI:3578166	12aex	12a exencephaly	Chemically induced (ENU)		15755804	MGI:3578159	12aex			MP:0003631,MP:0010768	12A	12a exencephaly
+MGI:8352285	0610030E20Rik<em1(IMPC)Mbp>	endonuclease-mediated mutation 1, Mouse Biology Program, UC Davis	Endonuclease-mediated	Null/knockout		MGI:1915614	0610030E20Rik	XM_006506534	ENSMUSG00000058706			RIKEN cDNA 0610030E20 gene
