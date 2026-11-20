@@ -41,6 +41,8 @@ public class GtexConverter extends BioDirectoryConverter
     private String dataSetEGene;
 
     private static final String DATA_SOURCE_NAME = "GTEx portal";
+    // GTEx Portal Data License, read 2026-11-18
+    private static final String LICENCE = "https://www.gtexportal.org/home/license";
     private Map<String, Item> genes = new HashMap<String, Item>();
     private static final String TAXON_ID = "9606";
     protected IdResolver rslv;
@@ -68,6 +70,7 @@ public class GtexConverter extends BioDirectoryConverter
 
         Item dataSetRnaSeq = createItem("DataSet");
         dataSetRnaSeq.setAttribute("name", DATASET_TITLE_RNASEQ);
+        dataSetRnaSeq.setAttribute("licence", LICENCE);
         dataSetRnaSeq.setReference("dataSource", datasourceRefId);
         try {
             store(dataSetRnaSeq);
@@ -78,6 +81,7 @@ public class GtexConverter extends BioDirectoryConverter
 
         Item dataSetEgene = createItem("DataSet");
         dataSetEgene.setAttribute("name", DATASET_TITLE_EGENE);
+        dataSetEgene.setAttribute("licence", LICENCE);
         dataSetEgene.setReference("dataSource", datasourceRefId);
         try {
             store(dataSetEgene);

@@ -50,7 +50,7 @@ public class ProteinAtlasConverter extends BioFileConverter
     private static final Logger LOG = Logger.getLogger(ProteinAtlasConverter.class);
     private static final String DATASET_TITLE = "The Human Protein Atlas expression profiles";
     private static final String DATA_SOURCE_NAME = "The Human Protein Atlas";
-    private static final String LICENSE = "https://creativecommons.org/licenses/by-sa/3.0/";
+    private static final String LICENSE = "https://creativecommons.org/licenses/by/4.0/";
 
     private Map<String, String> genes = new HashMap<String, String>();
     private Map<String, Item> tissues = new HashMap<String, Item>();

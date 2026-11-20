@@ -37,7 +37,7 @@ public class ProteinAtlasRNAConverter extends BioFileConverter
     private static final Logger LOG = Logger.getLogger(ProteinAtlasRNAConverter.class);
     private static final String DATASET_TITLE = "Protein Atlas RNA Gene data";
     private static final String DATA_SOURCE_NAME = "The Human Protein Atlas";
-    private static final String LICENSE = "https://creativecommons.org/licenses/by-sa/3.0/";
+    private static final String LICENSE = "https://creativecommons.org/licenses/by/4.0/";
     private Map<String, Item> genes = new HashMap<String, Item>();
     private Map<String, Item> tissues = new HashMap<String, Item>();
     private Set<String> storedTissues = new HashSet<String>();
