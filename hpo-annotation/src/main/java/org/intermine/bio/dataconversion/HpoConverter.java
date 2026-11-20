@@ -77,7 +77,7 @@ public class HpoConverter extends BioDirectoryConverter
      * @throws Exception if something goes wrong
      */
     public HpoConverter(ItemWriter writer, Model model) throws Exception {
-        super(writer, model, DATA_SOURCE_NAME, DATASET_TITLE, "https://hpo.jax.org/app/license");
+        super(writer, model, DATA_SOURCE_NAME, DATASET_TITLE, "https://hpo.jax.org/license");
     }
 
     @Override

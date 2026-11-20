@@ -89,7 +89,7 @@
         <collection name="evidences"><reference ref_id="8_8"/></collection>
     </item>
     <item id="2_1" class="DataSet">
-        <attribute name="licence" value="https://hpo.jax.org/app/license"/>
+        <attribute name="licence" value="https://hpo.jax.org/license"/>
         <attribute name="name" value="Human Phenotype Ontology Annotations"/>
         <reference name="dataSource" ref_id="1_1"/>
     </item>
